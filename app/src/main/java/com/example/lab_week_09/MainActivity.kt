@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -37,6 +38,9 @@ import androidx.navigation.navArgument
 import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
 import com.example.lab_week_09.ui.theme.OnBackgroundTitleText
 import com.example.lab_week_09.ui.theme.PrimaryTextButton
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +69,18 @@ class MainActivity : ComponentActivity() {
 data class Student(
     var name: String
 )
+
+object MoshiInstance {
+    private val moshiBuilder = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
+    val studentListAdapter = moshiBuilder
+        .adapter<List<Student>>(
+            Types.newParameterizedType(List::class.java,
+                Student::class.java)
+        )
+}
 
 @Preview(showBackground = true)
 @Composable
@@ -100,7 +116,10 @@ fun Home(
                 inputField.value = Student("")
             }
         },
-        navigateFromHomeToResult = {navigateFromHomeToResult(listData.toList().toString())}
+        navigateFromHomeToResult = {
+            val json = MoshiInstance.studentListAdapter.toJson(listData.toList())
+            navigateFromHomeToResult(json)
+        }
     )
 //    LazyColumn {
 //        item{
@@ -221,7 +240,9 @@ fun App(navController: NavHostController){
         startDestination = "home"
     ) {
         composable("home") {
-            Home { navController.navigate("resultContent/?listData=$it") }
+            Home { json ->
+                navController.navigate("resultContent/?listData=$json")
+            }
         }
 
         composable(
@@ -239,13 +260,33 @@ fun App(navController: NavHostController){
 
 @Composable
 fun ResultContent(listData: String) {
-    Column (
+    val students = try {
+        MoshiInstance.studentListAdapter.fromJson(listData)
+            ?: emptyList()
+    } catch (e: Exception) {
+        emptyList()
+    }
+    LazyColumn (
         modifier = Modifier
             .padding(vertical = 4.dp)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ){
-        OnBackgroundTitleText(text = listData)
+        item{
+            OnBackgroundTitleText(
+                text = "Student List: (${students.size} items)"
+            )
+        }
+        items(students){ student ->
+            Column(
+                modifier = Modifier
+                    .padding(vertical = 8.dp, horizontal = 16.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ){
+                OnBackgroundTitleText(text = student.name)
+            }
+        }
     }
 }
 
