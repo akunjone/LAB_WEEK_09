@@ -89,14 +89,18 @@ fun Home(
     HomeContent(
         listData,
         inputField.value,
-        {input -> inputField.value = inputField.value.copy(input) },
-        {
-            if(inputField.value.name.isNotBlank()){
+        {input ->
+            inputField.value = inputField.value.copy(input)
+        },
+        onButtonClick = {
+            if(inputField.value.name.trim().isNotBlank()){ //cek hasil input yg ditrim
+                //replace enter/newline dengan space, lalu trim
+                inputField.value = inputField.value.copy(name = inputField.value.name.replace("\n", " ").trim())
                 listData.add(inputField.value)
                 inputField.value = Student("")
             }
         },
-        {navigateFromHomeToResult(listData.toList().toString())}
+        navigateFromHomeToResult = {navigateFromHomeToResult(listData.toList().toString())}
     )
 //    LazyColumn {
 //        item{
